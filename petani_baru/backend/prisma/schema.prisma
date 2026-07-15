@@ -206,18 +206,6 @@ model ArtikelEdukasi {
   urlVideo       String?
 }
 
-model ProdukBibitPupuk {
-  id           String  @id
-  nama         String
-  tipe         String  // 'bibit' | 'pupuk'
-  harga        Float
-  stok         Int
-  satuan       String
-  deskripsi    String
-  gambar       String
-  subsidi      Boolean
-  diskonPersen Int?
-}
 
 model QualityControl {
   id               String  @id

@@ -38,9 +38,7 @@ export async function getAllData() {
   const artikelEdukasi = await prisma.artikelEdukasi.findMany({
     orderBy: [{ tanggalPublish: 'desc' }, { id: 'desc' }]
   });
-  const produkBibitPupuk = await prisma.produkBibitPupuk.findMany({
-    orderBy: { id: 'desc' }
-  });
+  const produkBibitPupuk: any[] = [];
   const qualityControl = await prisma.qualityControl.findMany({
     orderBy: [{ tanggalQC: 'desc' }, { id: 'desc' }]
   });
@@ -124,16 +122,7 @@ export async function createEdukasi(data: any) {
 
 export async function buyBibitPupuk(data: any) {
   const { items, totalHarga, petaniId } = data;
-  for (const item of items) {
-    const dbProduct = await prisma.produkBibitPupuk.findUnique({ where: { id: item.id } });
-    if (dbProduct) {
-      const newStock = Math.max(0, dbProduct.stok - item.quantity);
-      await prisma.produkBibitPupuk.update({
-        where: { id: item.id },
-        data: { stok: newStock }
-      });
-    }
-  }
+  // No-op: ProdukBibitPupuk table removed
 
   await prisma.notifikasi.create({
     data: {
