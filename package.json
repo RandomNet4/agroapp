@@ -1,0 +1,14 @@
+{
+  "name": "aplikasi",
+  "version": "1.0.0",
+  "description": "Root workspace",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --prefix gudang_baru/backend",
+    "dev:frontend": "wait-on tcp:5005 && npm run dev --prefix gudang_baru/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0"
+  }
+}
