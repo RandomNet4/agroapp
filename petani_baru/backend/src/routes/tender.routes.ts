@@ -13,5 +13,6 @@ router.put('/tender/:id/verify-admin', tenderController.verifyAdmin);
 router.post('/purchase-orders', tenderController.createPO);
 router.put('/purchase-orders/:id', tenderController.updatePO);
 router.delete('/purchase-orders/:id', tenderController.deletePO);
+router.post('/purchase-orders/:id/alokasi', tenderController.alokasikanPO);
 
 export default router;

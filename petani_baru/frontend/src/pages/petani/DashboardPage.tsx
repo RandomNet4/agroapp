@@ -19,12 +19,14 @@ const DashboardPage: React.FC = () => {
     currentUser,
     petani: dummyPetani,
     lahan: dummyLahan,
-    tanamanAktif: dummyTanamanAktif
+    tanamanAktif: dummyTanamanAktif,
+    tenderPetani: dummyTenderPetani
   } = useData();
   const navigate = useNavigate();
 
   const notifBelumDibaca = dummyNotifikasi.filter(n => !n.dibaca);
   const hargaTrending = dummyKomoditas.slice(0, 10);
+  const pendingPO = dummyTenderPetani.filter(tp => tp.petaniId === currentUser?.id && tp.statusApproval === 'pending').length;
 
   // Perhitungan Data Kelompok Tani (Kepala Petani)
   const anggotaKelompok = dummyPetani.filter(p => p.kepalaPetaniId === currentUser?.id);
@@ -44,8 +46,9 @@ const DashboardPage: React.FC = () => {
     .slice(0, 3);
 
   const services = [
-    { title: 'Rekomendasi', icon: Lightbulb, path: '/petani/rekomendasi', desc: 'Tanam apa?' },
+    { title: 'Rekomendasi Tanam', icon: Lightbulb, path: '/petani/rekomendasi', desc: 'Tanam apa?' },
     { title: 'Edukasi', icon: BookOpen, path: '/petani/edukasi', desc: 'Artikel & tips' },
+    { title: 'Pesanan Gudang', icon: ShoppingCart, path: '/petani/pesanan-gudang', desc: 'PO Gudang baru' },
   ];
 
   // RENDER KHUSUS KEPALA PETANI
@@ -304,6 +307,28 @@ const DashboardPage: React.FC = () => {
       {/* ── CONTENT ── */}
       <div className="px-5 pt-5 pb-6 space-y-5">
 
+        {/* Banner Pesanan Gudang Pending */}
+        {pendingPO > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 shadow-sm flex items-start gap-3 relative overflow-hidden">
+            <div className="w-1.5 h-full bg-blue-600 absolute left-0 top-0 bottom-0" />
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-750 shrink-0">
+              <ShoppingCart size={20} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-sm text-blue-800">Pesanan Gudang Baru</h3>
+              <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+                Anda menerima <b>{pendingPO}</b> alokasi PO baru dari Gudang Cianjur yang memerlukan pemrosesan segera.
+              </p>
+              <button
+                onClick={() => navigate('/petani/pesanan-gudang')}
+                className="mt-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-all"
+              >
+                Tinjau Pesanan →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── LAYANAN UNGGULAN ── */}
         <div>
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">Layanan Unggulan</p>
@@ -312,13 +337,15 @@ const DashboardPage: React.FC = () => {
               <button
                 key={i}
                 onClick={() => navigate(service.path)}
-                className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3 transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:border-primary-100 group"
+                className={`bg-white border border-gray-100 rounded-2xl transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:border-primary-100 group flex items-center p-3.5 gap-3 ${
+                  i === 2 ? 'col-span-2 justify-center' : 'justify-start'
+                }`}
               >
-                <div className="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-primary-100 transition-colors">
-                  <service.icon size={18} />
+                <div className="w-9 h-9 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-primary-100 transition-colors">
+                  <service.icon size={16} />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-bold text-gray-800 leading-tight">{service.title}</p>
+                  <p className="text-xs font-bold text-gray-800 leading-tight">{service.title}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{service.desc}</p>
                 </div>
               </button>

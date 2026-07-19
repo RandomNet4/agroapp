@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 1. Service Database PostgreSQL
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: agroapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ramariz1234
+      POSTGRES_DB: agro_tani
+    ports:
+      # Hanya diexpose ke localhost VPS (aman dari publik)
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agro-network
+
+  # 2. Service Backend Node.js
+  backend-app:
+    build:
+      context: ./petani_baru/backend
+      dockerfile: Dockerfile
+    container_name: agroapp-backend
+    restart: unless-stopped
+    # Load semua env vars dari backend/.env (API key email, gudang url, dll.)
+    env_file:
+      - ./petani_baru/backend/.env
+    environment:
+      # Meng-override URL database agar mengarah ke container postgres-db, bukan localhost
+      - DATABASE_URL=postgresql://postgres:ramariz1234@postgres-db:5432/agro_tani?schema=public
+      - DIRECT_URL=postgresql://postgres:ramariz1234@postgres-db:5432/agro_tani?schema=public
+      - PORT=5000
+    depends_on:
+      - postgres-db
+    networks:
+      - agro-network
+
+  # 3. Service Frontend (React + Nginx)
+  frontend-app:
+    build:
+      context: ./petani_baru/frontend
+      dockerfile: Dockerfile
+    container_name: agroapp-frontend
+    restart: unless-stopped
+    ports:
+      # Expose frontend ke port 80 VPS agar bisa diakses dari internet
+      - "80:80"
+    depends_on:
+      - backend-app
+    networks:
+      - agro-network
+
+volumes:
+  postgres_data:
+
+networks:
+  agro-network:
+    driver: bridge

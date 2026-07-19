@@ -31,3 +31,38 @@ export const hitungProgressTanaman = (
 
   return progress;
 };
+
+export interface LogbookEntry {
+  id: string;
+  tanggal: string; // YYYY-MM-DD
+  kategori: string;
+  catatan: string;
+}
+
+export const parseLogbook = (catatanRaw: string | null | undefined, tanggalTanam: string): LogbookEntry[] => {
+  if (!catatanRaw) {
+    return [{
+      id: 'init',
+      tanggal: tanggalTanam,
+      kategori: 'Penanaman',
+      catatan: 'Awal penanaman komoditas.'
+    }];
+  }
+  try {
+    const parsed = JSON.parse(catatanRaw);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch (e) {
+    // Return backward compatible single entry
+  }
+  return [
+    {
+      id: 'init',
+      tanggal: tanggalTanam,
+      kategori: 'Penanaman',
+      catatan: catatanRaw
+    }
+  ];
+};
+

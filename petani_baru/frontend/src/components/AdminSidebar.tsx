@@ -52,10 +52,16 @@ const menuGroups: MenuGroup[] = [
       { path: '/admin/pickup', label: 'Pickup & Armada', icon: <Truck size={18} /> },
       { path: '/admin/qc', label: 'Penimbangan', icon: <Scale size={18} /> },
       { path: '/admin/pembayaran', label: 'Pembayaran', icon: <CreditCard size={18} /> },
-      { path: '/admin/po', label: 'Surat Order (PO)', icon: <FileText size={18} /> },
     ],
   },
 
+  {
+    label: 'Laporan',
+    icon: <FileText size={20} />,
+    items: [
+      { path: '/admin/laporan', label: 'Unduh Laporan', icon: <FileText size={18} /> },
+    ],
+  },
   {
     label: 'Lainnya',
     icon: <BookOpen size={20} />,

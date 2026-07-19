@@ -51,7 +51,7 @@ interface DataContextType {
   addQualityControl: (data: any) => Promise<boolean>;
   payInvoice: (id: string, data: any) => Promise<boolean>;
   addTender: (data: any) => Promise<boolean>;
-  verifyTenderAdmin: (id: string, status: string) => Promise<boolean>;
+  verifyTenderAdmin: (id: string, status: string, alasanPenolakan?: string) => Promise<boolean>;
   applyTender: (data: any) => Promise<boolean>;
   verifyTenderPetani: (id: string, status: string, catatanAdmin?: string) => Promise<boolean>;
   addBukuKas: (data: any) => Promise<boolean>;
@@ -64,6 +64,7 @@ interface DataContextType {
   addPurchaseOrder: (data: any) => Promise<boolean>;
   editPurchaseOrder: (id: string, data: any) => Promise<boolean>;
   deletePurchaseOrder: (id: string) => Promise<boolean>;
+  alokasikanPO: (poId: string, data: any) => Promise<boolean>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -447,12 +448,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyTenderAdmin = async (id: string, status: string) => {
+  const verifyTenderAdmin = async (id: string, status: string, alasanPenolakan?: string) => {
     try {
       const res = await fetch(`/api/tender/${id}/verify-admin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, alasanPenolakan }),
       });
       if (!res.ok) return false;
       await refreshData();
@@ -656,6 +657,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const alokasikanPO = async (poId: string, allocationData: any): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/purchase-orders/${poId}/alokasi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(allocationData),
+      });
+      if (!res.ok) return false;
+      await refreshData();
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
   const logoutPetani = () => {
     setCurrentUser(null);
     localStorage.removeItem('token');
@@ -701,6 +718,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addPurchaseOrder,
       editPurchaseOrder,
       deletePurchaseOrder,
+      alokasikanPO,
     }}>
       {children}
     </DataContext.Provider>

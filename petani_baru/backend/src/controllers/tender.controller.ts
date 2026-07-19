@@ -21,9 +21,9 @@ export async function handleWebhook(req: Request, res: Response) {
 
 export async function verifyAdmin(req: Request, res: Response) {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, alasanPenolakan } = req.body;
   try {
-    const result = await tenderService.verifyTenderAdmin(id, status);
+    const result = await tenderService.verifyTenderAdmin(id, status, alasanPenolakan);
     res.json({ success: true, tender: result });
   } catch (error: any) {
     res.status(error.status || 500).json({ error: error.message || error });
@@ -72,6 +72,16 @@ export async function deletePO(req: Request, res: Response) {
   const { id } = req.params;
   try {
     const result = await tenderService.deletePurchaseOrder(id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.status || 500).json({ error: error.message || error });
+  }
+}
+
+export async function alokasikanPO(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const result = await tenderService.alokasikanPurchaseOrder(id, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(error.status || 500).json({ error: error.message || error });

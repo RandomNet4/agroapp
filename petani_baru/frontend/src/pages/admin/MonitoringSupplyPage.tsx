@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useData } from '../../context/DataContext';
-import { BarChart3, Sprout, Calendar } from 'lucide-react';
+import { BarChart3, Sprout, Calendar, Users, Map, TrendingUp, AlertTriangle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 
 // Helper: Hitung progress tanam (0-100%)
@@ -25,13 +25,89 @@ const hitungHariMenuju = (tanggal: string): number => {
 };
 
 const MonitoringSupplyPage: React.FC = () => {
-  const { komoditas: dummyKomoditas } = useData();
-  const { tanamanAktif: dummyTanamanAktif, petani: dummyPetani } = useData();
+  const { komoditas: dummyKomoditas, tanamanAktif: dummyTanamanAktif, petani: dummyPetani, lahan: dummyLahan } = useData();
   const totalProduksi = dummyKomoditas.reduce((s, k) => s + k.totalEstimasiProduksiKg, 0);
   const totalKebutuhan = dummyKomoditas.reduce((s, k) => s + k.kebutuhanBulananKg, 0);
   const kurang = dummyKomoditas.filter(k => k.supplyStatus === 'kurang');
   const cukup = dummyKomoditas.filter(k => k.supplyStatus === 'cukup');
   const berlebih = dummyKomoditas.filter(k => k.supplyStatus === 'berlebih');
+
+  // 1. Total Petani Mitra
+  const totalPetani = dummyPetani.filter(p => p.role === 'petani').length;
+  const petaniPending = dummyPetani.filter(p => p.role === 'petani' && p.statusVerifikasi === 'pending').length;
+
+  // 2. Total Luas Lahan (Ha)
+  const totalLuasLahan = dummyLahan.reduce((sum, l) => sum + l.luasHektar, 0);
+
+  // 3. Komoditas Terbanyak Bulan Ini (Dinamis Realtime)
+  const now = new Date();
+  const cropStatsByCommodity: Record<string, { nama: string; totalKg: number; count: number; gambar: string }> = {};
+
+  dummyTanamanAktif.forEach(t => {
+    const tanamDate = new Date(t.tanggalTanam);
+    const panenDate = new Date(t.estimasiPanen);
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    // Check if crop spans current month
+    const isActiveThisMonth = (tanamDate <= currentMonthEnd && panenDate >= currentMonthStart);
+    
+    if (isActiveThisMonth && t.statusVerifikasi === 'approved') {
+      if (!cropStatsByCommodity[t.komoditasId]) {
+        cropStatsByCommodity[t.komoditasId] = {
+          nama: t.komoditasNama,
+          totalKg: 0,
+          count: 0,
+          gambar: t.fotoTanaman || '🌱'
+        };
+      }
+      cropStatsByCommodity[t.komoditasId].totalKg += t.estimasiHasilKg;
+      cropStatsByCommodity[t.komoditasId].count += 1;
+    }
+  });
+
+  let terpopuler = { nama: '-', count: 0, totalKg: 0, gambar: '🌱' };
+  let maxCount = 0;
+  for (const cid in cropStatsByCommodity) {
+    if (cropStatsByCommodity[cid].count > maxCount) {
+      maxCount = cropStatsByCommodity[cid].count;
+      terpopuler = {
+        nama: cropStatsByCommodity[cid].nama,
+        count: cropStatsByCommodity[cid].count,
+        totalKg: cropStatsByCommodity[cid].totalKg,
+        gambar: cropStatsByCommodity[cid].gambar
+      };
+    }
+  }
+
+  // Fallback if no active tanaman in this month
+  if (terpopuler.nama === '-' && dummyTanamanAktif.length > 0) {
+    const allCropStats: Record<string, { nama: string; totalKg: number; count: number; gambar: string }> = {};
+    dummyTanamanAktif.forEach(t => {
+      if (!allCropStats[t.komoditasId]) {
+        allCropStats[t.komoditasId] = {
+          nama: t.komoditasNama,
+          totalKg: 0,
+          count: 0,
+          gambar: t.fotoTanaman || '🌱'
+        };
+      }
+      allCropStats[t.komoditasId].totalKg += t.estimasiHasilKg;
+      allCropStats[t.komoditasId].count += 1;
+    });
+    let maxAllCount = 0;
+    for (const cid in allCropStats) {
+      if (allCropStats[cid].count > maxAllCount) {
+        maxAllCount = allCropStats[cid].count;
+        terpopuler = {
+          nama: allCropStats[cid].nama,
+          count: allCropStats[cid].count,
+          totalKg: allCropStats[cid].totalKg,
+          gambar: allCropStats[cid].gambar
+        };
+      }
+    }
+  }
 
   // Get petani name by id
   const getPetaniNama = (petaniId: string) => dummyPetani.find(p => p.id === petaniId)?.nama || petaniId;
@@ -44,26 +120,92 @@ const MonitoringSupplyPage: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="stat-card from-blue-500 to-blue-600">
-          <p className="text-blue-100 text-xs mb-1">Total Estimasi Produksi</p>
-          <p className="text-3xl font-bold">{(totalProduksi / 1000).toFixed(0)} ton</p>
-          <p className="text-blue-200 text-xs mt-1">{dummyTanamanAktif.length} tanaman aktif</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {/* 1. Total Petani Mitra */}
+        <div className="stat-card from-emerald-600 to-teal-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wider">Petani Mitra</p>
+              <Users size={16} className="text-emerald-100" />
+            </div>
+            <p className="text-2xl font-bold">{totalPetani} Petani</p>
+          </div>
+          <p className="text-emerald-100/80 text-[10px] mt-2 font-medium">
+            {petaniPending > 0 ? `⚠️ ${petaniPending} pending verifikasi` : '✅ Semua terverifikasi'}
+          </p>
         </div>
-        <div className="stat-card from-purple-500 to-purple-600">
-          <p className="text-purple-100 text-xs mb-1">Total Kebutuhan</p>
-          <p className="text-3xl font-bold">{(totalKebutuhan / 1000).toFixed(0)} ton</p>
-          <p className="text-purple-200 text-xs mt-1">{dummyKomoditas.length} komoditas</p>
+
+        {/* 2. Total Luas Lahan */}
+        <div className="stat-card from-teal-600 to-cyan-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-teal-100 text-xs font-semibold uppercase tracking-wider">Total Luas Lahan</p>
+              <Map size={16} className="text-teal-100" />
+            </div>
+            <p className="text-2xl font-bold">{totalLuasLahan.toFixed(2)} Ha</p>
+          </div>
+          <p className="text-teal-100/80 text-[10px] mt-2 font-medium">
+            Dari {dummyLahan.length} lokasi lahan
+          </p>
         </div>
-        <div className="stat-card from-red-500 to-red-600">
-          <p className="text-red-100 text-xs mb-1">Kurang Supply</p>
-          <p className="text-3xl font-bold">{kurang.length}</p>
-          <p className="text-red-200 text-xs mt-1">Butuh lebih banyak petani</p>
+
+        {/* 3. Komoditas Terbanyak Bulan Ini */}
+        <div className="stat-card from-amber-500 to-orange-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-amber-100 text-xs font-semibold uppercase tracking-wider">Terbanyak ({now.toLocaleDateString('id-ID', {month:'short'})})</p>
+              <Sprout size={16} className="text-amber-100" />
+            </div>
+            <p className="text-lg font-bold truncate flex items-center gap-1.5">
+              <span className="shrink-0">{terpopuler.gambar}</span>
+              <span className="truncate">{terpopuler.nama}</span>
+            </p>
+          </div>
+          <p className="text-amber-100/80 text-[10px] mt-2 font-medium truncate">
+            {terpopuler.count > 0 ? `Ditanam oleh ${terpopuler.count} petani` : 'Belum ada tanaman'}
+          </p>
         </div>
-        <div className="stat-card from-emerald-500 to-emerald-600">
-          <p className="text-emerald-100 text-xs mb-1">Supply Tercukupi</p>
-          <p className="text-3xl font-bold">{cukup.length + berlebih.length}</p>
-          <p className="text-emerald-200 text-xs mt-1">{berlebih.length} berlebih</p>
+
+        {/* 4. Total Estimasi Produksi */}
+        <div className="stat-card from-blue-600 to-indigo-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider">Est. Produksi</p>
+              <TrendingUp size={16} className="text-blue-100" />
+            </div>
+            <p className="text-2xl font-bold">{(totalProduksi / 1000).toFixed(1)} Ton</p>
+          </div>
+          <p className="text-blue-100/80 text-[10px] mt-2 font-medium">
+            {dummyTanamanAktif.length} tanaman aktif
+          </p>
+        </div>
+
+        {/* 5. Total Kebutuhan */}
+        <div className="stat-card from-purple-600 to-fuchsia-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-purple-100 text-xs font-semibold uppercase tracking-wider">Kebutuhan Bulanan</p>
+              <BarChart3 size={16} className="text-purple-100" />
+            </div>
+            <p className="text-2xl font-bold">{(totalKebutuhan / 1000).toFixed(1)} Ton</p>
+          </div>
+          <p className="text-purple-100/80 text-[10px] mt-2 font-medium">
+            {dummyKomoditas.length} komoditas pasar
+          </p>
+        </div>
+
+        {/* 6. Ketahanan Supply */}
+        <div className="stat-card from-rose-600 to-pink-500 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-rose-100 text-xs font-semibold uppercase tracking-wider">Defisit Supply</p>
+              <AlertTriangle size={16} className="text-rose-100" />
+            </div>
+            <p className="text-2xl font-bold">{kurang.length} Komoditas</p>
+          </div>
+          <p className="text-rose-100/80 text-[10px] mt-2 font-medium">
+            {cukup.length + berlebih.length} komoditas aman
+          </p>
         </div>
       </div>
 

@@ -21,12 +21,12 @@ import FormTambahTanamanPage from './pages/petani/FormTambahTanamanPage';
 import NotifikasiPage from './pages/petani/NotifikasiPage';
 import HargaJualPage from './pages/petani/HargaJualPage';
 import RekomendasiTanamPage from './pages/petani/RekomendasiTanamPage';
+import PesananGudangPage from './pages/petani/PesananGudangPage';
 
 import JualPanenPage from './pages/petani/JualPanenPage';
 import FormAjukanPanenPage from './pages/petani/FormAjukanPanenPage';
 import JualPanenDetailPage from './pages/petani/JualPanenDetailPage';
 import TrackingPickupPage from './pages/petani/TrackingPickupPage';
-import JejakPanenPage from './pages/petani/JejakPanenPage';
 import EdukasiPage from './pages/petani/EdukasiPage';
 import DetailEdukasiPage from './pages/petani/DetailEdukasiPage';
 
@@ -56,6 +56,7 @@ import ManajemenEdukasiPage from './pages/admin/ManajemenEdukasiPage';
 import ManajemenAnggaranPage from './pages/admin/ManajemenAnggaranPage';
 import ManajemenPOPage from './pages/admin/ManajemenPOPage';
 import ManajemenTenderPage from './pages/admin/ManajemenTenderPage';
+import LaporanPage from './pages/admin/LaporanPage';
 
 // Route Guard for Petani (Farmer)
 const PetaniGuard: React.FC = () => {
@@ -112,12 +113,12 @@ const App: React.FC = () => {
           <Route path="data-lahan/tambah-tanaman" element={<FormTambahTanamanPage />} />
           <Route path="harga" element={<HargaJualPage />} />
           <Route path="rekomendasi" element={<RekomendasiTanamPage />} />
+          <Route path="pesanan-gudang" element={<PesananGudangPage />} />
 
           <Route path="jual-panen" element={<JualPanenPage />} />
           <Route path="jual-panen/form" element={<FormAjukanPanenPage />} />
           <Route path="jual-panen/:id" element={<JualPanenDetailPage />} />
           <Route path="tracking" element={<TrackingPickupPage />} />
-          <Route path="jejak-panen" element={<JejakPanenPage />} />
           <Route path="edukasi" element={<EdukasiPage />} />
           <Route path="edukasi/:id" element={<DetailEdukasiPage />} />
 
@@ -151,6 +152,7 @@ const App: React.FC = () => {
           <Route path="/admin/anggaran" element={<ManajemenAnggaranPage />} />
           <Route path="/admin/edukasi" element={<ManajemenEdukasiPage />} />
           <Route path="/admin/po" element={<ManajemenPOPage />} />
+          <Route path="/admin/laporan" element={<LaporanPage />} />
         </Route>
       </Route>
 

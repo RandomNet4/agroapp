@@ -181,6 +181,7 @@ model Tender {
   deskripsi       String
   hargaPerKg      Float
   createdAt       DateTime @default(now())
+  alasanPenolakan String?
 }
 
 model TenderPetani {
@@ -192,6 +193,7 @@ model TenderPetani {
   statusApproval String  // 'pending' | 'approved' | 'rejected' | 'survey'
   tanggalDaftar  String
   catatanAdmin   String?
+  batasWaktu     String?
 }
 
 model ArtikelEdukasi {

@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import {
   FileText, Plus, Search,
-  Trash2, X, Eye, AlertCircle, Edit, Save, Printer
+  Trash2, X, Eye, AlertCircle, Edit, Save, Printer, Sprout
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '../../data/adminDummy';
 
@@ -22,9 +22,12 @@ const ManajemenPOPage: React.FC = () => {
     purchaseOrders,
     komoditas: dummyKomoditas,
     petani: dummyPetani,
+    tanamanAktif: dummyTanamanAktif,
+    lahan: dummyLahan,
     addPurchaseOrder,
     editPurchaseOrder,
-    deletePurchaseOrder
+    deletePurchaseOrder,
+    alokasikanPO
   } = useData();
 
   // State Management
@@ -49,6 +52,12 @@ const ManajemenPOPage: React.FC = () => {
     { komoditasNama: '', volumeKg: 0, hargaPerKg: 0, totalHarga: 0 }
   ]);
   const [loading, setLoading] = useState(false);
+
+  // Alokasi Panen State
+  const [showAlokasiModal, setShowAlokasiModal] = useState(false);
+  const [selectedItemForAlokasi, setSelectedItemForAlokasi] = useState<POItem | null>(null);
+  const [selectedAllocations, setSelectedAllocations] = useState<Record<string, number>>({});
+  const [tanggalPanen, setTanggalPanen] = useState('');
 
   // Auto-generate REQ ID
   const generateReqId = () => {
@@ -140,6 +149,47 @@ const ManajemenPOPage: React.FC = () => {
       setShowAddModal(false);
     } else {
       alert('Gagal membuat Purchase Order.');
+    }
+  };
+
+  const handleOpenAlokasiModal = (item: POItem) => {
+    setSelectedItemForAlokasi(item);
+    setSelectedAllocations({});
+    setTanggalPanen(selectedPO ? selectedPO.estimasiPengantaran : new Date().toISOString().substring(0, 10));
+    setShowAlokasiModal(true);
+  };
+
+  const handleSaveAlokasi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPO || !selectedItemForAlokasi) return;
+
+    const allocations = Object.entries(selectedAllocations)
+      .filter(([_, qty]) => qty > 0)
+      .map(([tanamanId, qty]) => {
+        const t = dummyTanamanAktif.find(tan => tan.id === tanamanId);
+        return {
+          petaniId: t?.petaniId,
+          tanamanAktifId: tanamanId,
+          beratKg: qty,
+          tanggalPanen
+        };
+      });
+
+    if (allocations.length === 0) {
+      alert('Pilih setidaknya satu lahan dan masukkan jumlah alokasi (KG) yang valid!');
+      return;
+    }
+
+    setLoading(true);
+    const success = await alokasikanPO(selectedPO.id, { allocations });
+    setLoading(false);
+
+    if (success) {
+      alert('Alokasi berhasil disimpan dan instruksi panen telah dikirim ke petani!');
+      setShowAlokasiModal(false);
+      setSelectedPO(null); // Tutup detail PO untuk memicu refresh data list
+    } else {
+      alert('Gagal menyimpan alokasi panen.');
     }
   };
 
@@ -763,6 +813,7 @@ const ManajemenPOPage: React.FC = () => {
                           <th className="px-4 py-3 text-center w-36">VOLUME KEBUTUHAN (KG)</th>
                           <th className="px-4 py-3 text-right w-36">HARGA/KG</th>
                           <th className="px-4 py-3 text-right w-40">TOTAL HARGA</th>
+                          <th className="px-4 py-3 text-center w-32 print:hidden">AKSI ALOKASI</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -778,6 +829,15 @@ const ManajemenPOPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3.5 text-right font-black text-slate-900">
                               {formatRupiah(item.totalHarga)}
+                            </td>
+                            <td className="px-4 py-3.5 text-center print:hidden">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAlokasiModal(item)}
+                                className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-[10px] uppercase tracking-wide transition-colors flex items-center justify-center gap-1 mx-auto"
+                              >
+                                <Plus size={12} /> Alokasikan
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -819,6 +879,196 @@ const ManajemenPOPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================== MODAL: ALOKASI PANEN ==================================== */}
+      {showAlokasiModal && selectedItemForAlokasi && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAlokasiModal(false)} />
+            <div className="relative bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-gray-100 animate-slide-up">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
+                <div>
+                  <h3 className="text-lg font-display font-bold text-gray-900 flex items-center gap-2">
+                    <Sprout className="text-primary-600 animate-bounce" size={20} />
+                    Alokasi Panen: {selectedItemForAlokasi.komoditasNama}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Mencocokkan kebutuhan pesanan ({selectedItemForAlokasi.volumeKg} KG) dengan lahan siap panen.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAlokasiModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <form onSubmit={handleSaveAlokasi} className="space-y-5">
+                {/* Info Box */}
+                <div className="p-3 bg-primary-50 rounded-2xl border border-primary-100 text-xs text-primary-800 flex items-start gap-2">
+                  <AlertCircle size={16} className="text-primary-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    Sistem memfilter tanaman aktif <strong>{selectedItemForAlokasi.komoditasNama}</strong> milik petani yang telah diverifikasi (Approved). Wortel aman dipanen dalam rentang toleransi hingga 1-7 hari setelah estimasi matang.
+                  </p>
+                </div>
+
+                {/* Lahan Siap Panen List */}
+                <div className="space-y-3">
+                  <span className="block text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Pilih Lahan & Tentukan Kuota Panen:
+                  </span>
+                  
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 font-semibold">
+                          <th className="text-left px-4 py-2.5">Petani / Lahan</th>
+                          <th className="text-center px-4 py-2.5">Estimasi Tanggal Panen</th>
+                          <th className="text-right px-4 py-2.5">Est. Hasil (KG)</th>
+                          <th className="text-center px-4 py-2.5 w-32">Jumlah Alokasi (KG)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dummyTanamanAktif.filter(t => 
+                          t.komoditasNama.toLowerCase() === selectedItemForAlokasi.komoditasNama.toLowerCase() &&
+                          t.statusVerifikasi === 'approved'
+                        ).length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="text-center py-8 text-gray-400">
+                              <AlertCircle className="mx-auto mb-2 text-gray-300" size={24} />
+                              Tidak ada tanaman aktif {selectedItemForAlokasi.komoditasNama} yang siap/sudah diverifikasi untuk dialokasikan.
+                            </td>
+                          </tr>
+                        ) : (
+                          dummyTanamanAktif.filter(t => 
+                            t.komoditasNama.toLowerCase() === selectedItemForAlokasi.komoditasNama.toLowerCase() &&
+                            t.statusVerifikasi === 'approved'
+                          ).map(t => {
+                            const petaniNama = dummyPetani.find(p => p.id === t.petaniId)?.nama || 'Petani';
+                            const lahanNama = dummyLahan.find(l => l.id === t.lahanId)?.namaLahan || 'Lahan';
+                            
+                            // Hitung sisa hari menuju panen
+                            const target = new Date(t.estimasiPanen);
+                            const sekarang = new Date();
+                            const diffDays = Math.ceil((target.getTime() - sekarang.getTime()) / (1000 * 60 * 60 * 24));
+                            let timeStatus = '';
+                            if (diffDays === 0) timeStatus = 'Hari ini';
+                            else if (diffDays > 0) timeStatus = `${diffDays} hari lagi`;
+                            else timeStatus = `Lewat ${Math.abs(diffDays)} hari`;
+
+                            return (
+                              <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="font-semibold text-gray-900">{petaniNama}</div>
+                                  <div className="text-[10px] text-gray-500">{lahanNama}</div>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <div className="font-medium">{formatTanggal(t.estimasiPanen)}</div>
+                                  <div className={`text-[10px] font-bold ${
+                                    diffDays < 0 ? 'text-amber-600' : diffDays <= 7 ? 'text-emerald-600' : 'text-gray-500'
+                                  }`}>
+                                    {timeStatus}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right font-bold text-gray-800">
+                                  {t.estimasiHasilKg.toLocaleString('id-ID')} KG
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <div className="flex items-center gap-1 justify-center">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max={t.estimasiHasilKg}
+                                      placeholder="0"
+                                      className="input-field py-1 px-2 text-center text-xs w-24 font-bold border-primary-200 focus:border-primary-500"
+                                      value={selectedAllocations[t.id] || ''}
+                                      onChange={e => {
+                                        const val = Math.max(0, Math.min(t.estimasiHasilKg, parseFloat(e.target.value) || 0));
+                                        setSelectedAllocations({
+                                          ...selectedAllocations,
+                                          [t.id]: val
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-[10px] text-gray-400 font-bold">KG</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Progress & Target */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between text-xs font-semibold mb-1">
+                      <span className="text-gray-500">Status Pengisian Kebutuhan</span>
+                      <span className="text-slate-800">
+                        {Object.values(selectedAllocations).reduce((sum, v) => sum + v, 0).toLocaleString('id-ID')} / {selectedItemForAlokasi.volumeKg.toLocaleString('id-ID')} KG
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          Object.values(selectedAllocations).reduce((sum, v) => sum + v, 0) >= selectedItemForAlokasi.volumeKg
+                            ? 'bg-emerald-500' 
+                            : 'bg-primary-500'
+                        }`}
+                        style={{ 
+                          width: `${Math.min(
+                            (Object.values(selectedAllocations).reduce((sum, v) => sum + v, 0) / selectedItemForAlokasi.volumeKg) * 100, 
+                            100
+                          )}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="w-full md:w-56">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-1">
+                      Tanggal Rencana Pengiriman
+                    </label>
+                    <input
+                      type="date"
+                      className="input-field py-1.5 text-xs font-semibold"
+                      value={tanggalPanen}
+                      onChange={e => setTanggalPanen(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Form Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAlokasiModal(false)}
+                    className="btn-secondary text-xs py-2 px-4"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || Object.values(selectedAllocations).reduce((sum, v) => sum + v, 0) === 0}
+                    className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Save size={14} /> Kirim Instruksi & Alokasikan Panen
+                  </button>
+                </div>
+              </form>
+
             </div>
           </div>
         </div>

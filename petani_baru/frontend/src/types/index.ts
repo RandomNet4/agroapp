@@ -3,10 +3,10 @@
 // =====================================================
 
 // --- Status Enums ---
-export type StatusVerifikasi = 'pending' | 'approved' | 'rejected' | 'survey';
+export type StatusVerifikasi = 'pending' | 'approved' | 'rejected' | 'survey' | 'selesai';
 export type StatusPickup = 'dijadwalkan' | 'berangkat' | 'hampir_tiba' | 'sudah_sampai' | 'proses_timbang' | 'selesai';
 export type StatusPembayaran = 'menunggu' | 'diproses' | 'dibayar' | 'gagal';
-export type StatusTender = 'aktif' | 'terpenuhi' | 'kadaluarsa';
+export type StatusTender = 'aktif' | 'terpenuhi' | 'kadaluarsa' | 'pending' | 'ditolak';
 export type StatusPengajuanJual = 'pending' | 'approved' | 'rejected' | 'survey' | 'pickup_dijadwalkan' | 'proses_timbang' | 'selesai';
 export type JenisLahan = 'sawah' | 'kebun';
 export type GradeKualitas = 'A' | 'B' | 'C' | 'reject';
@@ -187,6 +187,7 @@ export interface Tender {
   status: StatusTender;
   deskripsi: string;
   hargaPerKg: number;
+  createdAt?: string;
 }
 
 export interface TenderPetani {
@@ -198,6 +199,7 @@ export interface TenderPetani {
   statusApproval: StatusVerifikasi;
   tanggalDaftar: string;
   catatanAdmin?: string;
+  batasWaktu?: string;
 }
 
 export interface ArtikelEdukasi {

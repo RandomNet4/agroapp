@@ -3,11 +3,12 @@
 // =====================================================
 
 import React, { useState } from 'react';
-import { X, MapPin, Scale, Leaf, Calendar, Clock, Save, AlertTriangle } from 'lucide-react';
+import { X, MapPin, Scale, Leaf, Calendar, Clock, Save, AlertTriangle, BookOpen, PlusCircle, Trash, Clipboard } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import type { Lahan, TanamanAktif, Komoditas } from '../types';
 import { useData } from '../context/DataContext';
 import { formatJarakTanam } from '../utils/spacing';
+import { parseLogbook, type LogbookEntry } from '../utils/cropHelpers';
 
 // ── KONFIRMASI HAPUS ──
 export const DeleteConfirmModal: React.FC<{
@@ -255,12 +256,32 @@ export const DetailTanamanModal: React.FC<{
             </div>
           )}
 
-          {tanaman.catatan && (
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Catatan Petani</p>
-              <p className="text-xs text-gray-700 mt-1.5 leading-relaxed italic">"{tanaman.catatan}"</p>
-            </div>
-          )}
+          {(() => {
+            const logs = parseLogbook(tanaman.catatan, tanaman.tanggalTanam);
+            return (
+              <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200/80 space-y-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <BookOpen size={11} className="text-emerald-500" /> Catatan & Logbook Penanaman
+                </p>
+                <div className="space-y-2 mt-1.5 max-h-48 overflow-y-auto pr-1">
+                  {logs.map((log) => {
+                    const tglLog = new Date(log.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    return (
+                      <div key={log.id} className="text-[11px] bg-white p-2.5 rounded-lg border border-gray-100 flex items-start justify-between gap-2 shadow-sm font-medium text-gray-700">
+                        <div className="flex-1">
+                          <span className="text-[8px] font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded uppercase tracking-wider mr-1.5 inline-block">
+                            {log.kategori}
+                          </span>
+                          <span className="text-gray-700 leading-normal">{log.catatan}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-400 shrink-0 mt-0.5">{tglLog}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -492,6 +513,226 @@ export const EditTanamanModal: React.FC<{
             <Save size={16} /> {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
           </button>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// ── LOGBOOK MODAL ──
+export const LogbookModal: React.FC<{
+  tanaman: TanamanAktif;
+  onClose: () => void;
+  onSave: () => void;
+}> = ({ tanaman, onClose, onSave }) => {
+  const { editTanaman } = useData();
+  const [logs, setLogs] = useState<LogbookEntry[]>(() => parseLogbook(tanaman.catatan, tanaman.tanggalTanam));
+  const [form, setForm] = useState({
+    tanggal: new Date().toISOString().split('T')[0],
+    kategori: 'Pemupukan',
+    catatan: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleAddEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.catatan.trim()) {
+      setErrorMsg('Catatan tidak boleh kosong.');
+      return;
+    }
+    setErrorMsg('');
+    setLoading(true);
+
+    const newEntry: LogbookEntry = {
+      id: `LOG_${Date.now()}`,
+      tanggal: form.tanggal,
+      kategori: form.kategori,
+      catatan: form.catatan.trim(),
+    };
+
+    const updatedLogs = [newEntry, ...logs]; // latest at the top
+
+    const success = await editTanaman(tanaman.id, {
+      ...tanaman,
+      catatan: JSON.stringify(updatedLogs),
+    });
+
+    setLoading(false);
+    if (success) {
+      setLogs(updatedLogs);
+      setForm({
+        tanggal: new Date().toISOString().split('T')[0],
+        kategori: 'Pemupukan',
+        catatan: '',
+      });
+      onSave();
+    } else {
+      setErrorMsg('Gagal menyimpan catatan harian.');
+    }
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    if (id === 'init') {
+      alert('Entri awal penanaman tidak dapat dihapus.');
+      return;
+    }
+    if (!window.confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
+      return;
+    }
+
+    setLoading(true);
+    const updatedLogs = logs.filter(log => log.id !== id);
+
+    // If array becomes empty, set it back to initial or empty array stringified
+    const updatedCatatan = updatedLogs.length > 0 ? JSON.stringify(updatedLogs) : '';
+
+    const success = await editTanaman(tanaman.id, {
+      ...tanaman,
+      catatan: updatedCatatan,
+    });
+
+    setLoading(false);
+    if (success) {
+      setLogs(updatedLogs);
+      onSave();
+    } else {
+      alert('Gagal menghapus catatan.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-0 animate-fade-in">
+      <div className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+              <BookOpen size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 text-base leading-tight">Logbook & Catatan Tanam</h3>
+              <p className="text-[11px] text-gray-500 font-medium">{tanaman.komoditasNama}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-gray-50/50">
+          {/* Form Tambah Entry */}
+          <form onSubmit={handleAddEntry} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm space-y-3.5">
+            <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+              <PlusCircle size={14} className="text-emerald-500" /> Tambah Catatan Baru
+            </h4>
+
+            {errorMsg && (
+              <p className="text-xs text-red-500 font-medium">{errorMsg}</p>
+            )}
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Tanggal</label>
+                <input
+                  required
+                  type="date"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
+                  value={form.tanggal}
+                  onChange={e => setForm({ ...form, tanggal: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Kategori Kegiatan</label>
+                <select
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 transition-all font-medium text-gray-700"
+                  value={form.kategori}
+                  onChange={e => setForm({ ...form, kategori: e.target.value })}
+                >
+                  <option value="Pemupukan">🧪 Pemupukan</option>
+                  <option value="Penyiraman">💧 Penyiraman</option>
+                  <option value="Penyemprotan">💨 Penyemprotan Hama</option>
+                  <option value="Penyiangan">🌱 Penyiangan Rumput</option>
+                  <option value="Perkembangan">📈 Perkembangan</option>
+                  <option value="Lainnya">📝 Lainnya</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Catatan Detail</label>
+              <textarea
+                required
+                rows={2}
+                placeholder="Tuliskan kondisi tanaman, dosis pupuk, kendala, dll..."
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 transition-all resize-none shadow-inner"
+                value={form.catatan}
+                onChange={e => setForm({ ...form, catatan: e.target.value })}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-100 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+            >
+              Simpan Catatan
+            </button>
+          </form>
+
+          {/* Timeline Riwayat */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Riwayat Kegiatan</h4>
+            
+            {logs.length === 0 ? (
+              <div className="text-center py-6 bg-white border border-dashed border-gray-200 rounded-2xl">
+                <Clipboard size={24} className="text-gray-300 mx-auto mb-1.5" />
+                <p className="text-xs text-gray-500 font-medium">Belum ada catatan.</p>
+              </div>
+            ) : (
+              <div className="relative border-l-2 border-emerald-100 ml-2.5 pl-4 space-y-4 py-1">
+                {logs.map((log) => {
+                  const tglDisplay = new Date(log.tanggal).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  });
+
+                  return (
+                    <div key={log.id} className="relative font-medium text-gray-700">
+                      {/* Bullet point icon */}
+                      <span className="absolute -left-[22.5px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white bg-emerald-500 flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      </span>
+
+                      <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm relative group">
+                        {log.id !== 'init' && (
+                          <button
+                            onClick={() => handleDeleteEntry(log.id)}
+                            className="absolute right-2 top-2 p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-md transition-colors"
+                            title="Hapus Catatan"
+                          >
+                            <Trash size={12} />
+                          </button>
+                        )}
+
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-gray-400">{tglDisplay}</span>
+                          <span className="text-[9px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {log.kategori}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-700 leading-relaxed break-words font-medium">
+                          {log.catatan}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

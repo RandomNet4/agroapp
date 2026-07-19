@@ -1,0 +1,8 @@
+{
+  "name": "agro-tani-root",
+  "version": "1.0.0",
+  "description": "Root untuk menjalankan backend dan frontend secara bersamaan",
+  "scripts": {
+    "dev": "npx concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\" --names \"backend,frontend\" --prefix-colors \"blue,green\""
+  }
+}

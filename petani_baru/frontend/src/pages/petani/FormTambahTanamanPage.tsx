@@ -14,6 +14,7 @@ const FormTambahTanamanPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const petaniId = currentUser?.id || '';
   const [showSuccess, setShowSuccess] = useState(false);
+  const isFromRecommendation = !!searchParams.get('komoditasId');
 
   // Produktivitas rata-rata per m² berdasarkan komoditas
   const getProductivityCoeff = (komoditasId: string) => {
@@ -243,15 +244,23 @@ const FormTambahTanamanPage: React.FC = () => {
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Komoditas</label>
               <select
                 required
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                disabled={isFromRecommendation}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-80 disabled:bg-gray-100 font-medium text-gray-700"
                 value={formData.komoditasId}
                 onChange={(e) => handleDataChange('komoditasId', e.target.value)}
               >
                 <option value="">-- Pilih Komoditas --</option>
-                {dummyKomoditas.map(k => (
-                  <option key={k.id} value={k.id}>{k.nama}</option>
-                ))}
+                {dummyKomoditas
+                  .filter(k => !isFromRecommendation || k.id === formData.komoditasId)
+                  .map(k => (
+                    <option key={k.id} value={k.id}>{k.nama}</option>
+                  ))}
               </select>
+              {isFromRecommendation && (
+                <p className="text-[10px] text-emerald-600 mt-1.5 font-semibold">
+                  * Pilihan dikunci berdasarkan komoditas dari Rekomendasi Tanam.
+                </p>
+              )}
             </div>
             
             {/* Tampilkan Info Komoditas jika terpilih */}

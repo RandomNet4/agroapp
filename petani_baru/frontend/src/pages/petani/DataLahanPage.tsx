@@ -4,10 +4,10 @@
 
 import React, { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { ArrowLeft, MapPin, Calendar, Scale, Plus, TrendingUp, ShoppingCart, Leaf, Clock, CheckCircle2, X, MoreVertical, Eye, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Scale, Plus, TrendingUp, ShoppingCart, Leaf, Clock, CheckCircle2, X, MoreVertical, Eye, Pencil, Trash2, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../../components/StatusBadge';
-import { DetailLahanModal, EditLahanModal, DeleteConfirmModal, DetailTanamanModal, EditTanamanModal } from '../../components/LahanModals';
+import { DetailLahanModal, EditLahanModal, DeleteConfirmModal, DetailTanamanModal, EditTanamanModal, LogbookModal } from '../../components/LahanModals';
 import { hitungHariMenuju } from '../../data/dummy';
 import { hitungProgressTanaman } from '../../utils/cropHelpers';
 
@@ -51,6 +51,7 @@ const DataLahanPage: React.FC = () => {
   const [hapusTanaman, setHapusTanaman] = useState<any>(null);
   const [batalTanaman, setBatalTanaman] = useState<any>(null);
   const [menuTanaman, setMenuTanaman] = useState<string | null>(null);
+  const [openLogbook, setOpenLogbook] = useState<any>(null);
 
   const [toastMsg, setToastMsg] = useState('');
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
@@ -290,9 +291,31 @@ const DataLahanPage: React.FC = () => {
                                   <div className="absolute right-0 top-7 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-20 w-40">
                                     <button onClick={() => { setDetailTanaman({ tanaman: t, lahanNama: lahan.namaLahan }); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"><Eye size={14} className="text-blue-500" /> Detail</button>
                                     <button onClick={() => { setEditTanamanData(t); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"><Pencil size={14} className="text-amber-500" /> Edit</button>
-                                    {(statusText === 'Ditanam' || statusText === 'Pemeliharaan' || statusText === 'Menunggu Verifikasi') && (
-                                      <button onClick={() => { setBatalTanaman(t); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"><X size={14} /> Batalkan Tanam</button>
-                                    )}
+                                    {(() => {
+                                      const isDraftOrActive = (statusText === 'Ditanam' || statusText === 'Pemeliharaan' || statusText === 'Menunggu Verifikasi');
+                                      if (!isDraftOrActive) return null;
+
+                                      const tglTanam = new Date(t.tanggalTanam);
+                                      const tglTanamDate = new Date(tglTanam.getFullYear(), tglTanam.getMonth(), tglTanam.getDate());
+                                      const today = new Date();
+                                      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                      
+                                      const diffTime = todayDate.getTime() - tglTanamDate.getTime();
+                                      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                                      const canCancel = diffDays <= 2;
+
+                                      if (canCancel) {
+                                        return (
+                                          <button onClick={() => { setBatalTanaman(t); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                            <X size={14} /> Batalkan Tanam
+                                          </button>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    <button onClick={() => { setOpenLogbook(t); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-emerald-700 hover:bg-emerald-50 flex items-center gap-2">
+                                      <BookOpen size={14} /> Logbook Tanam
+                                    </button>
                                     <button onClick={() => { setHapusTanaman(t); setMenuTanaman(null); }} className="w-full px-3 py-2.5 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"><Trash2 size={14} /> Hapus</button>
                                   </div>
                                 )}
@@ -357,17 +380,47 @@ const DataLahanPage: React.FC = () => {
                                 </div>
                               )}
 
-                              {/* Tombol Batalkan Tanam */}
-                              {(statusText === 'Ditanam' || statusText === 'Pemeliharaan' || statusText === 'Menunggu Verifikasi') && (
-                                <div className="mt-3">
-                                  <button
-                                    onClick={() => setBatalTanaman(t)}
-                                    className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all border border-red-200"
-                                  >
-                                    <X size={12} /> Batalkan Tanam
-                                  </button>
-                                </div>
-                              )}
+                              {/* Tombol Batalkan Tanam / Info Menunggu Panen & Logbook */}
+                              {(() => {
+                                const isDraftOrActive = (statusText === 'Ditanam' || statusText === 'Pemeliharaan' || statusText === 'Menunggu Verifikasi');
+                                if (!isDraftOrActive) return null;
+
+                                const tglTanam = new Date(t.tanggalTanam);
+                                const tglTanamDate = new Date(tglTanam.getFullYear(), tglTanam.getMonth(), tglTanam.getDate());
+                                const today = new Date();
+                                const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                
+                                const diffTime = todayDate.getTime() - tglTanamDate.getTime();
+                                const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                                const canCancel = diffDays <= 2;
+
+                                return (
+                                  <div className="mt-3 space-y-2">
+                                    {canCancel ? (
+                                      <button
+                                        onClick={() => setBatalTanaman(t)}
+                                        className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all border border-red-200"
+                                      >
+                                        <X size={12} /> Batalkan Tanam
+                                      </button>
+                                    ) : (
+                                      <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-2.5 flex items-start gap-2">
+                                        <Clock size={12} className="text-amber-600 shrink-0 mt-0.5" />
+                                        <div className="text-[10px] text-amber-800 leading-normal font-medium">
+                                          <span className="font-bold">Sedang Menunggu Panen</span>. Masa pembatalan (2 hari) telah berakhir dan penanaman telah disetujui.
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <button
+                                      onClick={() => setOpenLogbook(t)}
+                                      className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1.5 transition-all border border-emerald-100"
+                                    >
+                                      <BookOpen size={12} /> Logbook & Catatan
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         );
@@ -521,6 +574,15 @@ const DataLahanPage: React.FC = () => {
           message={`Apakah Anda yakin ingin membatalkan proses tanam untuk tanaman "${batalTanaman.komoditasNama}"? Seluruh data terkait tanaman ini akan dihapus dari sistem.`}
           onCancel={() => setBatalTanaman(null)}
           onConfirm={handleBatalTanaman}
+        />
+      )}
+
+      {/* MODAL LOGBOOK TANAMAN */}
+      {openLogbook && (
+        <LogbookModal
+          tanaman={openLogbook}
+          onClose={() => setOpenLogbook(null)}
+          onSave={() => showToast('Logbook Tanaman Diperbarui!')}
         />
       )}
     </div>

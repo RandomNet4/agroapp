@@ -24,6 +24,7 @@ const ManajemenPickupPage: React.FC = () => {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [beratTimbang, setBeratTimbang] = useState('');
   const [submittingSelesai, setSubmittingSelesai] = useState(false);
+  const [selectedAssignId, setSelectedAssignId] = useState<string | null>(null);
 
   const handleAdminSelesai = async (pkpId: string) => {
     if (!beratTimbang || isNaN(Number(beratTimbang)) || Number(beratTimbang) <= 0) {
@@ -79,6 +80,7 @@ const ManajemenPickupPage: React.FC = () => {
     setLoading(false);
     if (success) {
       setShowAssign(false);
+      setSelectedAssignId(null);
       setForm({ pengajuanJualId: '', tanggalPickup: '', driverNama: '', driverNoHp: '', armada: '', platNomor: '' });
     } else {
       alert('Gagal menjadwalkan pickup.');
@@ -136,6 +138,142 @@ const ManajemenPickupPage: React.FC = () => {
             <button onClick={handleSimpan} disabled={loading} className="btn-primary text-sm flex items-center gap-1 disabled:opacity-50">
               <Save size={14} /> {loading ? 'Menyimpan...' : 'Simpan'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SEKSI 1: PERMINTAAN PENJEMPUTAN BARU (BUTUH ARMADA) ── */}
+      {pengajuanSiapPickup.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-md font-bold text-gray-800 flex items-center gap-2 mb-4 bg-amber-50 border border-amber-100 p-3 rounded-2xl">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+            Permintaan Penjemputan Baru ({pengajuanSiapPickup.length})
+          </h2>
+          <div className="grid grid-cols-1 gap-4">
+            {pengajuanSiapPickup.map(pj => (
+              <div key={pj.id} className="card border-l-4 border-amber-500 bg-white shadow-sm p-5 rounded-3xl relative overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">{pj.id}</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200">
+                        Butuh Armada
+                      </span>
+                    </div>
+                    <h3 className="font-extrabold text-gray-900 text-md flex items-center gap-1.5">
+                      {pj.komoditasNama}
+                    </h3>
+                    <p className="text-xs text-gray-500 font-semibold mt-0.5">Petani: <span className="text-gray-800 font-bold">{pj.petaniNama}</span></p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Berat Estimasi</span>
+                        <span className="font-bold text-gray-900 text-sm">{pj.beratEstimasiKg.toLocaleString('id-ID')} KG</span>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Rencana Tanggal</span>
+                        <span className="font-bold text-gray-900 text-sm">{formatTanggal(pj.tanggalSiapPickup)}</span>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-xl text-center">
+                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Lokasi Lahan</span>
+                        <span className="font-bold text-gray-900 text-xs truncate block px-1" title={pj.lahanNama || '-'}>
+                          {pj.lahanNama || '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center md:justify-end shrink-0">
+                    {selectedAssignId !== pj.id ? (
+                      <button
+                        onClick={() => {
+                          setSelectedAssignId(pj.id);
+                          setForm({
+                            pengajuanJualId: pj.id,
+                            tanggalPickup: pj.tanggalSiapPickup,
+                            driverNama: '',
+                            driverNoHp: '',
+                            armada: '',
+                            platNomor: '',
+                          });
+                        }}
+                        className="w-full md:w-auto btn-primary bg-amber-600 hover:bg-amber-700 text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
+                      >
+                        <Truck size={14} /> Jadwalkan Driver & Kendaraan
+                      </button>
+                    ) : (
+                      <span className="text-xs text-amber-600 font-bold bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100 animate-pulse">
+                        Sedang Menginput...
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Inline Assignment Form */}
+                {selectedAssignId === pj.id && (
+                  <div className="mt-5 pt-5 border-t border-dashed border-gray-200 animate-slide-up">
+                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Lengkapi Informasi Driver & Armada</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-1">Nama Driver</label>
+                        <input
+                          type="text"
+                          placeholder="Nama driver"
+                          className="input-field py-2 text-xs"
+                          value={form.driverNama}
+                          onChange={e => setForm({ ...form, driverNama: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-1">No. HP Driver</label>
+                        <input
+                          type="tel"
+                          placeholder="08xxxxxxx"
+                          className="input-field py-2 text-xs"
+                          value={form.driverNoHp}
+                          onChange={e => setForm({ ...form, driverNoHp: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-1">Jenis Kendaraan (Armada)</label>
+                        <input
+                          type="text"
+                          placeholder="Misal: L300 / Engkel"
+                          className="input-field py-2 text-xs"
+                          value={form.armada}
+                          onChange={e => setForm({ ...form, armada: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block mb-1">Nomor Polisi (Plat)</label>
+                        <input
+                          type="text"
+                          placeholder="B 1234 CD"
+                          className="input-field py-2 text-xs"
+                          value={form.platNomor}
+                          onChange={e => setForm({ ...form, platNomor: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end mt-4">
+                      <button
+                        onClick={() => setSelectedAssignId(null)}
+                        className="px-4 py-2 rounded-xl text-xs bg-white text-gray-600 border border-gray-200 font-semibold"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={handleSimpan}
+                        disabled={loading}
+                        className="px-4 py-2 rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5"
+                      >
+                        <Save size={14} /> {loading ? 'Menyimpan...' : 'Konfirmasi & Jadwalkan'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -48,9 +48,21 @@ const ManajemenTenderPage: React.FC = () => {
     }
   };
   const handleVerify = async (id: string, status: string) => {
-    if (!window.confirm(`Yakin ingin mengubah status menjadi ${status}?`)) return;
+    let alasan: string | undefined = undefined;
+    if (status === 'ditolak') {
+      const inputAlasan = window.prompt('Masukkan alasan penolakan PO ini:');
+      if (inputAlasan === null) return; // User cancelled prompt
+      if (!inputAlasan.trim()) {
+        alert('Alasan penolakan harus diisi!');
+        return;
+      }
+      alasan = inputAlasan.trim();
+    } else {
+      if (!window.confirm(`Yakin ingin menyetujui PO ini?`)) return;
+    }
+
     setLoading(true);
-    const success = await verifyTenderAdmin(id, status);
+    const success = await verifyTenderAdmin(id, status, alasan);
     setLoading(false);
     if (!success) {
       alert('Gagal memverifikasi tender');
@@ -127,17 +139,30 @@ const ManajemenTenderPage: React.FC = () => {
                     )}
                   </h3>
                   <p className="text-xs text-gray-500">{t.deskripsi}</p>
+                  {(t as any).alasanPenolakan && (
+                    <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded p-2 mt-2 font-medium">
+                      ❌ Alasan Penolakan: {(t as any).alasanPenolakan}
+                    </p>
+                  )}
                 </div>
                 <StatusBadge status={t.status} />
               </div>
               <div className="grid grid-cols-3 gap-2 text-center mb-3">
                 <div className="bg-gray-50 rounded-lg p-2">
                   <p className="text-[10px] text-gray-500">Kebutuhan</p>
-                  <p className="font-bold">{(t.kebutuhanKg / 1000).toFixed(0)} ton</p>
+                  <p className="font-bold">
+                    {t.kebutuhanKg >= 1000
+                      ? `${(t.kebutuhanKg / 1000).toFixed(1)} ton`
+                      : `${t.kebutuhanKg} kg`}
+                  </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-2">
                   <p className="text-[10px] text-gray-500">Terpenuhi</p>
-                  <p className="font-bold text-primary-700">{(t.terpenuhinKg / 1000).toFixed(1)} ton</p>
+                  <p className="font-bold text-primary-700">
+                    {t.terpenuhinKg >= 1000
+                      ? `${(t.terpenuhinKg / 1000).toFixed(1)} ton`
+                      : `${t.terpenuhinKg} kg`}
+                  </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-2">
                   <p className="text-[10px] text-gray-500">Harga</p>

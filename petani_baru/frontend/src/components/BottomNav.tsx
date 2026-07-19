@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, TrendingUp, ShoppingCart, History, BookOpen, Sprout, FileText, Truck, Package, Leaf, User, Users, ClipboardCheck } from 'lucide-react';
+import { Home, TrendingUp, ShoppingCart, History, BookOpen, Sprout, FileText, Truck, Package, User, Users, ClipboardCheck } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 interface NavItem {
@@ -79,10 +79,10 @@ export const menuPetani = [
   { path: '/petani/data-lahan', label: 'Data Lahan',           icon: <Sprout size={20} />,       desc: 'Lahan & tanaman aktif' },
   { path: '/petani/harga',      label: 'Harga Jual',           icon: <TrendingUp size={20} />,   desc: 'Harga komoditas terbaru' },
   { path: '/petani/rekomendasi',label: 'Rekomendasi Tanam',    icon: <Sprout size={20} />,       desc: 'Saran komoditas' },
+  { path: '/petani/pesanan-gudang',label: 'Pesanan Gudang',     icon: <ShoppingCart size={20} />, desc: 'PO Gudang baru' },
   { path: '/petani/tender',     label: 'Tender',               icon: <FileText size={20} />,     desc: 'Permintaan khusus Agro' },
   { path: '/petani/jual-panen', label: 'Jual Panen',           icon: <ShoppingCart size={20} />, desc: 'Ajukan jual hasil panen' },
   { path: '/petani/tracking',   label: 'Tracking Pickup',      icon: <Truck size={20} />,        desc: 'Pantau pengambilan panen' },
-  { path: '/petani/jejak-panen',label: 'Jejak Panen',          icon: <Leaf size={20} />,         desc: 'Lacak perjalanan panen' },
   { path: '/petani/riwayat',    label: 'Riwayat Pembayaran',   icon: <History size={20} />,      desc: 'Histori transaksi' },
   { path: '/petani/edukasi',    label: 'Edukasi & Berita',     icon: <BookOpen size={20} />,     desc: 'Artikel & video' },
   { path: '/petani/bibit-pupuk',label: 'Bibit & Pupuk',        icon: <Package size={20} />,      desc: 'Beli bibit & pupuk' },

@@ -24,6 +24,7 @@ app.use('/api', apiRouter);
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Backend server is running on http://localhost:${PORT}`);
+    // Nodemon trigger comment
   });
 }
 
